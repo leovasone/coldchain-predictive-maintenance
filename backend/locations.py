@@ -84,15 +84,23 @@ def _scatter(lat: float, lon: float, rng: random.Random, spread_deg: float = 0.1
     )
 
 
-def build_fleet(seed: int = 7, assets_per_city: int = 6) -> list[dict]:
-    """Deterministic (seeded) synthetic fleet: assets_per_city assets in each
-    of the 6 tracked cities, evenly split across the 3 asset types."""
+def build_fleet(seed: int = 7, total_assets: int = 350) -> list[dict]:
+    """Deterministic (seeded) synthetic fleet: total_assets assets spread as
+    evenly as possible across the 6 tracked cities (any remainder from
+    uneven division goes to the first cities in CITIES), each evenly split
+    across the 3 asset types.
+
+    total_assets replaced the older assets_per_city parameter so the fleet
+    size doesn't have to be a multiple of len(CITIES) -- 350 / 6 isn't a
+    whole number, so cities get 58 or 59 assets each (348 + 2 remainder)."""
     rng = random.Random(seed)
     fleet = []
     asset_type_cycle = list(ASSET_TYPES.keys())
+    base, remainder = divmod(total_assets, len(CITIES))
     counter = 1
-    for city in CITIES:
-        for i in range(assets_per_city):
+    for city_idx, city in enumerate(CITIES):
+        city_count = base + (1 if city_idx < remainder else 0)
+        for i in range(city_count):
             asset_type = asset_type_cycle[i % len(asset_type_cycle)]
             lat, lon = _scatter(city["lat"], city["lon"], rng)
             venue = rng.choice(VENUE_LABELS)

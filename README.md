@@ -37,7 +37,7 @@ telemetry_sim.py (synthetic IoT)  ->  features.py  ->  ml_models.py
 ```
 
 - **`backend/locations.py`** -- deterministic (seeded) synthetic fleet of
-  ~36 assets and 18 technicians distributed across the 6 tracked cities,
+  350 assets and 18 technicians distributed across the 6 tracked cities,
   plus a parts catalog. No real addresses or business names.
 - **`backend/telemetry_sim.py`** -- generates per-asset temperature,
   current draw, compressor duty cycle, and door-open-rate readings. Most
