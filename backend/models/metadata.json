@@ -1,0 +1,56 @@
+{
+  "feature_names": [
+    "temp_dev_ratio",
+    "temp_trend_ratio",
+    "temp_std_ratio",
+    "current_ratio",
+    "current_trend_ratio",
+    "duty_last_pct",
+    "duty_trend_pct",
+    "door_events_last",
+    "door_events_trend"
+  ],
+  "sequence_length": 8,
+  "n_train_samples": 1575,
+  "n_test_samples": 525,
+  "held_out_roc_auc": 1.0,
+  "feature_importances": [
+    {
+      "feature": "temp_dev_ratio",
+      "importance": 0.334
+    },
+    {
+      "feature": "duty_trend_pct",
+      "importance": 0.299
+    },
+    {
+      "feature": "duty_last_pct",
+      "importance": 0.198
+    },
+    {
+      "feature": "current_ratio",
+      "importance": 0.169
+    },
+    {
+      "feature": "temp_std_ratio",
+      "importance": 0.0
+    },
+    {
+      "feature": "current_trend_ratio",
+      "importance": 0.0
+    },
+    {
+      "feature": "door_events_trend",
+      "importance": 0.0
+    },
+    {
+      "feature": "temp_trend_ratio",
+      "importance": 0.0
+    },
+    {
+      "feature": "door_events_last",
+      "importance": 0.0
+    }
+  ],
+  "trained_on": "synthetic telemetry only (telemetry_sim.py) -- no real fleet history exists for this demo"
+}
