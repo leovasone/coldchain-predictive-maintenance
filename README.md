@@ -170,3 +170,12 @@ it).
   current fleet/technician/active-alert snapshot immediately on connect,
   rather than only receiving future updates and potentially staring at an
   empty dashboard until the next poll cycle.
+- First Railway deploy crashed on startup with `TypeError: Client.__init__()
+  got an unexpected keyword argument 'proxies'`. Cause: `anthropic==0.39.0`
+  still passes `proxies=` to `httpx.Client()`, a kwarg httpx removed in
+  0.28.0, and `requirements.txt` didn't pin `httpx` -- so an unrelated
+  fresh install pulled in a too-new httpx. Since both agent modules build
+  their `Anthropic` client at import time, this crashed the whole app on
+  startup, not just the agent calls. Fixed by pinning `httpx<0.28` (the
+  sibling realtime-weather-insights project already pinned this
+  correctly; this project's `requirements.txt` was missing it).

@@ -1,6 +1,12 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 anthropic==0.39.0
+# anthropic 0.39.0 still passes proxies= to httpx.Client(), a kwarg httpx
+# removed in 0.28.0 -- pinning below that avoids a TypeError at import time
+# (diagnostics_agent.py/dispatch_agent.py both construct an Anthropic client
+# at module import, so this crashes the whole app on startup, not just a
+# single request, if left unpinned).
+httpx<0.28
 scikit-learn==1.7.2
 joblib==1.4.2
 numpy==2.2.6
