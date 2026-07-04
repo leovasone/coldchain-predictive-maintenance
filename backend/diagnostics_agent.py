@@ -135,8 +135,10 @@ def _classify_from_features(features: dict) -> tuple[str, str]:
     (not the model's fixed global importance ranking, which is the same 3
     features every time and would otherwise make every fallback diagnosis
     land on the same alert_type regardless of what's actually unusual about
-    this particular asset). Returns (alert_type, a short reason string
-    naming the feature and value that triggered it)."""
+    this particular asset). Returns (alert_type, a short reason written in
+    plain business language -- this string is shown directly to viewers of
+    the dashboard, so it deliberately avoids raw variable names/code
+    syntax like `temp_dev_ratio=1.4`)."""
     temp_dev = features.get("temp_dev_ratio", 0.0)
     temp_trend = features.get("temp_trend_ratio", 0.0)
     temp_std = features.get("temp_std_ratio", 0.0)
@@ -147,18 +149,33 @@ def _classify_from_features(features: dict) -> tuple[str, str]:
     door_trend = features.get("door_events_trend", 0.0)
 
     if temp_dev > 1.2 and current_ratio > 1.3:
-        return "falha_eletrica", f"temp_dev_ratio={temp_dev} e current_ratio={current_ratio} elevados juntos"
+        return "falha_eletrica", (
+            f"desvio de temperatura acentuado ({temp_dev:.1f}x o normal) combinado com "
+            f"corrente elétrica {current_ratio:.1f}x acima do limite -- padrão típico de falha elétrica"
+        )
     if current_ratio > 1.4 or abs(current_trend) > 0.5:
-        return "corrente_anomala", f"current_ratio={current_ratio}, current_trend_ratio={current_trend}"
+        return "corrente_anomala", (
+            f"corrente elétrica em {current_ratio:.1f}x o limite normal "
+            f"(variação de {current_trend:+.1f} na janela recente)"
+        )
     if temp_std > 0.5 or abs(temp_trend) > 0.9:
-        return "temperatura_instavel", f"temp_std_ratio={temp_std}, temp_trend_ratio={temp_trend}"
+        return "temperatura_instavel", (
+            f"temperatura instável -- variação de {temp_std:.1f} e tendência de {temp_trend:+.1f} "
+            "acima do esperado para operação normal"
+        )
     if door_last > 3.0 or door_trend > 2.0:
-        return "excesso_aberturas", f"door_events_last={door_last}, door_events_trend={door_trend}"
+        return "excesso_aberturas", (
+            f"{door_last:.0f} aberturas de porta na última hora (tendência de {door_trend:+.1f}) -- "
+            "acima do padrão de uso normal"
+        )
     if duty_last > 90.0:
-        return "perda_refrigeracao", f"duty_last_pct={duty_last}"
+        return "perda_refrigeracao", f"compressor operando em {duty_last:.0f}% do ciclo, próximo do limite"
     if temp_dev > 0.8:
-        return "temperatura_alta", f"temp_dev_ratio={temp_dev}"
-    return "temperatura_alta", f"temp_dev_ratio={temp_dev} (maior desvio disponível, sem gatilho mais específico)"
+        return "temperatura_alta", f"temperatura {temp_dev:.1f}x acima do centro da faixa normal"
+    return "temperatura_alta", (
+        f"leve desvio de temperatura ({temp_dev:.1f}x o normal) -- sinal mais relevante "
+        "disponível, sem indicador mais específico no momento"
+    )
 
 
 def _fallback(ml_result: dict) -> dict:
@@ -167,14 +184,16 @@ def _fallback(ml_result: dict) -> dict:
     severity = _severity_from_probability(ml_result["failure_probability"])
     features = ml_result.get("features", {})
     alert_type, reason = _classify_from_features(features)
+    anomaly_pct = round(ml_result["anomaly_score"] * 100)
+    failure_pct = round(ml_result["failure_probability"] * 100)
 
     return {
         "alert_type": alert_type,
         "severity": severity,
         "diagnosis": (
-            f"Modelo de ML indica anomaly_score={ml_result['anomaly_score']} e "
-            f"failure_probability={ml_result['failure_probability']}. Classificação por regra: {reason}. "
-            "Diagnóstico automático (agente de IA indisponível)."
+            f"Modelo de Machine Learning aponta {anomaly_pct}% de anomalia e {failure_pct}% de "
+            f"probabilidade de falha. Causa provável: {reason}. "
+            "Diagnóstico gerado automaticamente (agente de IA indisponível no momento)."
         ),
         "recommended_action": "Inspecionar o ativo e verificar o componente associado ao tipo de falha indicado.",
         "source": "rule-based-fallback",

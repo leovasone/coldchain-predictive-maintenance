@@ -179,3 +179,14 @@ it).
   startup, not just the agent calls. Fixed by pinning `httpx<0.28` (the
   sibling realtime-weather-insights project already pinned this
   correctly; this project's `requirements.txt` was missing it).
+- The first dashboard pass exposed raw ML internals to viewers: snake_case
+  feature names (`temp_dev_ratio`, `duty_trend_pct`), a monospace/code
+  aesthetic, and a rule-based fallback diagnosis that literally rendered
+  `anomaly_score=0.8, failure_probability=0.9` in the alert text. Fine for
+  a developer console, wrong for a dashboard meant to read as an
+  enterprise monitoring product. Fixed on both ends: the frontend now maps
+  every feature name to a plain-language label (`features.py` still uses
+  the precise snake_case names internally -- only the display layer
+  translates them), and `diagnostics_agent.py`'s fallback (`_fallback`,
+  `_classify_from_features`) now composes full sentences with rounded
+  percentages instead of interpolating raw variable=value pairs.
