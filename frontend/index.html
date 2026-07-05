@@ -31,6 +31,16 @@
   .dot{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
   .dot.on{ background:var(--ok); box-shadow:0 0 0 3px var(--ok-soft); }
 
+  .agents-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+  .agent-chip{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; box-shadow:var(--shadow); }
+  .agent-dot{ width:10px; height:10px; border-radius:50%; background:var(--primary); box-shadow:0 0 0 4px var(--primary-soft); flex-shrink:0; transition:background .2s, box-shadow .2s; }
+  .agent-dot.active{ background:var(--ok); box-shadow:0 0 0 5px var(--ok-soft); animation:agent-pulse 1.4s ease-out 1; }
+  @keyframes agent-pulse{ 0%{ box-shadow:0 0 0 0 rgba(22,163,74,.45); } 100%{ box-shadow:0 0 0 9px rgba(22,163,74,0); } }
+  .agent-info{ min-width:0; }
+  .agent-name{ font-size:0.86rem; font-weight:700; letter-spacing:-0.01em; }
+  .agent-name .agent-role{ font-weight:500; color:var(--text-dim); }
+  .agent-meta{ font-size:0.74rem; color:var(--text-dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
   .stats-row{ display:grid; grid-template-columns:repeat(6, 1fr); gap:14px; margin-bottom:20px; }
   .stat-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 16px; box-shadow:var(--shadow); }
   .stat-card .label{ font-size:0.72rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
@@ -108,6 +118,23 @@
   <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">Conectando...</span></div>
 </header>
 
+<div class="agents-row">
+  <div class="agent-chip">
+    <span class="agent-dot" id="agentDiagDot"></span>
+    <div class="agent-info">
+      <div class="agent-name">ColdSentinel <span class="agent-role">· agente de diagnóstico</span></div>
+      <div class="agent-meta" id="agentDiagMeta">Monitorando a frota — nenhum diagnóstico ainda</div>
+    </div>
+  </div>
+  <div class="agent-chip">
+    <span class="agent-dot" id="agentDispatchDot"></span>
+    <div class="agent-info">
+      <div class="agent-name">FieldPilot <span class="agent-role">· agente de despacho</span></div>
+      <div class="agent-meta" id="agentDispatchMeta">Aguardando o primeiro alerta</div>
+    </div>
+  </div>
+</div>
+
 <div class="stats-row">
   <div class="stat-card"><div class="label">Ativos</div><div class="num" id="statTotal">–</div></div>
   <div class="stat-card ok"><div class="label">Normais</div><div class="num" id="statOk">–</div></div>
@@ -156,6 +183,43 @@ const ACTIVE_ALERT_IDS = new Set();
 
 const STATUS_COLOR = { ok: '#16a34a', warning: '#d97706', critical: '#dc2626' };
 const TECH_COLOR = { available: '#2554e8', dispatched: '#9aa4b2' };
+
+// ---------- AI agent status chips (ColdSentinel + FieldPilot) ----------
+// Every raised alert runs through both agents server-side (see main.py's
+// _raise_alert): diagnostics_agent.diagnose() then dispatch_agent.dispatch().
+// These counters are session-local (they start from whatever's already
+// active in the first snapshot, then grow with each new 'alert' message) --
+// good enough to show real, moving activity without needing a dedicated
+// lifetime-counter endpoint on the backend.
+let agentDiagCount = 0;
+let agentDispatchCount = 0;
+const agentDiagDot = document.getElementById('agentDiagDot');
+const agentDispatchDot = document.getElementById('agentDispatchDot');
+const agentDiagMeta = document.getElementById('agentDiagMeta');
+const agentDispatchMeta = document.getElementById('agentDispatchMeta');
+
+function pulseAgentDot(dotEl){
+  dotEl.classList.remove('active');
+  // force reflow so the animation restarts if it's still mid-pulse
+  void dotEl.offsetWidth;
+  dotEl.classList.add('active');
+}
+
+function noteAgentActivity(alert){
+  agentDiagCount += 1;
+  agentDispatchCount += 1;
+  pulseAgentDot(agentDiagDot);
+  pulseAgentDot(agentDispatchDot);
+
+  const sourceLabel = SOURCE_LABEL[alert.diagnosis_source] || alert.diagnosis_source;
+  agentDiagMeta.textContent = `${agentDiagCount} diagnóstico${agentDiagCount === 1 ? '' : 's'} — último via ${sourceLabel.toLowerCase()}`;
+
+  const dispatch = alert.dispatch || {};
+  const dispatchSummary = dispatch.technician_name
+    ? `despachou ${dispatch.technician_name} (${dispatch.distance_km} km)`
+    : 'nenhum técnico disponível na região';
+  agentDispatchMeta.textContent = `${agentDispatchCount} despacho${agentDispatchCount === 1 ? '' : 's'} — último ${dispatchSummary}`;
+}
 
 // ---------- Leaflet (loaded dynamically so a CDN hiccup never blocks the
 // rest of the dashboard -- same pattern as Chart.js in the sibling
@@ -301,6 +365,16 @@ function handleSnapshot(msg){
     Object.values(FLEET).forEach(renderAssetMarker);
     Object.values(TECHNICIANS).forEach(renderTechMarker);
   }
+  // Seed the agent counters from whatever's already active on connect, no
+  // pulse animation here -- these already happened before this client
+  // joined, so "just fired" would be misleading.
+  const already = (msg.active_alerts || []).length;
+  if(already > 0){
+    agentDiagCount = already;
+    agentDispatchCount = already;
+    agentDiagMeta.textContent = `${agentDiagCount} diagnóstico${agentDiagCount === 1 ? '' : 's'} realizado${agentDiagCount === 1 ? '' : 's'} até agora`;
+    agentDispatchMeta.textContent = `${agentDispatchCount} despacho${agentDispatchCount === 1 ? '' : 's'} realizado${agentDispatchCount === 1 ? '' : 's'} até agora`;
+  }
   recomputeStats();
 }
 
@@ -320,6 +394,7 @@ function handleAlert(msg){
   const tech = alert.dispatch && alert.dispatch.technician_id != null ? TECHNICIANS[alert.dispatch.technician_id] : null;
   if(tech){ tech.status = 'dispatched'; renderTechMarker(tech); }
   renderAlertCard(alert);
+  noteAgentActivity(alert);
   recomputeStats();
 }
 
@@ -393,4 +468,13 @@ async function loadMlMetadata(){
       <p class="ml-disclaimer">Modelos treinados exclusivamente com dados sintéticos gerados para esta demonstração — nenhuma frota real foi utilizada. Uma acurácia tão alta reflete a limpeza dos dados sintéticos, não uma estimativa de desempenho esperado em uma operação real.</p>
     `;
   } catch (err) {
-    el.innerHT
+    el.innerHTML = '<p class="empty">Não foi possível carregar os metadados dos modelos.</p>';
+  }
+}
+
+initMap();
+connect();
+loadMlMetadata();
+</script>
+</body>
+</html>
