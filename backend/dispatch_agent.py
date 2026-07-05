@@ -37,7 +37,7 @@ _client: anthropic.Anthropic | None = None
 if os.environ.get("ANTHROPIC_API_KEY"):
     _client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-_SYSTEM_PROMPT = """Você é o FieldPilot, agente de despacho de técnicos de campo para
+_SYSTEM_PROMPT = """Você é o FieldPilot, agente de envio de técnicos de campo para
 uma frota de ativos de refrigeração monitorados por IoT na América Latina.
 
 Sua função: dado um alerta já diagnosticado e uma lista de técnicos disponíveis

@@ -129,7 +129,7 @@
   <div class="agent-chip">
     <span class="agent-dot" id="agentDispatchDot"></span>
     <div class="agent-info">
-      <div class="agent-name">FieldPilot <span class="agent-role">· agente de despacho</span></div>
+      <div class="agent-name">FieldPilot <span class="agent-role">· agente de envio</span></div>
       <div class="agent-meta" id="agentDispatchMeta">Aguardando o primeiro alerta</div>
     </div>
   </div>
@@ -157,7 +157,7 @@
   </div>
   <div class="right-col">
     <div class="panel">
-      <div class="panel-head"><span class="bar"></span><h2>Alertas & Despacho</h2></div>
+      <div class="panel-head"><span class="bar"></span><h2>Alertas & Envio</h2></div>
       <div id="alertsFeed"><p class="empty">Nenhum alerta ainda — a frota está sendo monitorada.</p></div>
     </div>
     <div class="panel ml-panel">
@@ -167,7 +167,7 @@
   </div>
 </div>
 
-<footer>Frota, leituras de IoT, técnicos e falhas são inteiramente sintéticos — não existe frota real por trás deste demo. Detecção de anomalias: IsolationForest (não supervisionado). Risco de falha: Gradient Boosting (supervisionado). Diagnóstico e despacho: agentes baseados em Claude, com regra automática de contingência.</footer>
+<footer>Frota, leituras de IoT, técnicos e falhas são inteiramente sintéticos — não existe frota real por trás deste demo. Detecção de anomalias: IsolationForest (não supervisionado). Risco de falha: Gradient Boosting (supervisionado). Diagnóstico e envio: agentes baseados em Claude, com regra automática de contingência.</footer>
 
 <script>
 const WS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -216,9 +216,9 @@ function noteAgentActivity(alert){
 
   const dispatch = alert.dispatch || {};
   const dispatchSummary = dispatch.technician_name
-    ? `despachou ${dispatch.technician_name} (${dispatch.distance_km} km)`
+    ? `enviou ${dispatch.technician_name} (${dispatch.distance_km} km)`
     : 'nenhum técnico disponível na região';
-  agentDispatchMeta.textContent = `${agentDispatchCount} despacho${agentDispatchCount === 1 ? '' : 's'} — último ${dispatchSummary}`;
+  agentDispatchMeta.textContent = `${agentDispatchCount} envio${agentDispatchCount === 1 ? '' : 's'} — último ${dispatchSummary}`;
 }
 
 // ---------- Leaflet (loaded dynamically so a CDN hiccup never blocks the
@@ -326,7 +326,7 @@ function renderAlertCard(alert){
 
   const dispatch = alert.dispatch || {};
   const dispatchLine = dispatch.technician_name
-    ? `<b>${dispatch.technician_name}</b> despachado — ${dispatch.distance_km} km, chegada em ${dispatch.eta_min} min<br>${dispatch.reasoning || ''}`
+    ? `<b>${dispatch.technician_name}</b> enviado — ${dispatch.distance_km} km, chegada em ${dispatch.eta_min} min<br>${dispatch.reasoning || ''}`
     : (dispatch.reasoning || 'Sem técnico disponível no momento.');
 
   const anomalyPct = Math.round((alert.ml.anomaly_score || 0) * 100);
@@ -373,7 +373,7 @@ function handleSnapshot(msg){
     agentDiagCount = already;
     agentDispatchCount = already;
     agentDiagMeta.textContent = `${agentDiagCount} diagnóstico${agentDiagCount === 1 ? '' : 's'} realizado${agentDiagCount === 1 ? '' : 's'} até agora`;
-    agentDispatchMeta.textContent = `${agentDispatchCount} despacho${agentDispatchCount === 1 ? '' : 's'} realizado${agentDispatchCount === 1 ? '' : 's'} até agora`;
+    agentDispatchMeta.textContent = `${agentDispatchCount} envio${agentDispatchCount === 1 ? '' : 's'} realizado${agentDispatchCount === 1 ? '' : 's'} até agora`;
   }
   recomputeStats();
 }
@@ -478,3 +478,4 @@ loadMlMetadata();
 </script>
 </body>
 </html>
+                     
